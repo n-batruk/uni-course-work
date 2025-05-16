@@ -18,43 +18,42 @@ services:
     build:
       context: .
       dockerfile: docker/etl_extractor.Dockerfile
-    volumes:
-      - data-volume:/data
-    depends_on:
-      postgres:
-        condition: service_healthy
+    # volumes:
+    #   - data-volume:/data
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
 
   etl-transformer:
     build:
       context: .
       dockerfile: docker/etl_transformer.Dockerfile
-    volumes:
-      - data-volume:/data
-      - transformed-volume:/transformed
-    depends_on:
-      etl-extractor:
-        condition: service_started
+    # volumes:
+    #   - data-volume:/data
+    #   - transformed-volume:/transformed
+    # depends_on:
+    #   etl-extractor:
+    #     condition: service_started
 
   etl-loader:
     build:
       context: .
       dockerfile: docker/etl_loader.Dockerfile
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: etl_db
-      DB_USER: etl_user
-      DB_PASSWORD: password
-    volumes:
-      - transformed-volume:/transformed
-    depends_on:
-      postgres:
-        condition: service_healthy
-      etl-transformer:
-        condition: service_completed_successfully
+    # environment:
+    #   DB_HOST: postgres
+    #   DB_PORT: 5432
+    #   DB_NAME: etl_db
+    #   DB_USER: etl_user
+    #   DB_PASSWORD: password
+    # volumes:
+    #   - transformed-volume:/transformed
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    #   etl-transformer:
+    #     condition: service_completed_successfully
 
 volumes:
   pgdata:
   data-volume:
   transformed-volume:
-иг
