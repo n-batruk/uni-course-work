@@ -12,7 +12,7 @@ COPY etl_extractor/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Змінні оточення (можна перевизначити при запуску)
-ENV SOURCE_API_URL="https://api.example.com/orders" \
+ENV SOURCE_API_URL="https://jsonplaceholder.typicode.com/comments" \
     OUTPUT_DIR="/data"
 
 # Точка входу

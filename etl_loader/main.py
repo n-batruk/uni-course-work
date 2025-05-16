@@ -33,17 +33,21 @@ def load_cleaned(conn):
         # Підготуємо кортежі для upsert
         rows = [(rec["id"], rec["region"], float(rec["amount"])) for rec in records]
         sql = """
-        CREATE TABLE IF NOT EXISTS raw_orders (
-            id TEXT PRIMARY KEY,
-            region TEXT NOT NULL,
-            amount NUMERIC NOT NULL,
+        CREATE TABLE IF NOT EXISTS raw_comments (
+            id INTEGER PRIMARY KEY,
+            post_id INTEGER NOT NULL,
+            name TEXT,
+            email TEXT,
+            body TEXT,
             loaded_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
         );
-        INSERT INTO raw_orders (id, region, amount)
+        INSERT INTO raw_comments (id, post_id, name, email, body)
         VALUES %s
         ON CONFLICT (id) DO UPDATE
-          SET region = EXCLUDED.region,
-              amount = EXCLUDED.amount,
+          SET post_id = EXCLUDED.post_id,
+              name = EXCLUDED.name,
+              email = EXCLUDED.email,
+              body = EXCLUDED.body,
               loaded_at = now();
         """
         with conn.cursor() as cur:
@@ -62,17 +66,17 @@ def load_aggregated(conn):
             for region, stats in agg.items()
         ]
         sql = """
-        CREATE TABLE IF NOT EXISTS agg_orders_by_region (
-            region TEXT PRIMARY KEY,
-            order_count INTEGER NOT NULL,
-            total_amount NUMERIC NOT NULL,
+        CREATE TABLE IF NOT EXISTS agg_comments_by_post (
+            post_id INTEGER PRIMARY KEY,
+            comment_count INTEGER NOT NULL,
+            total_words INTEGER NOT NULL,
             updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
         );
-        INSERT INTO agg_orders_by_region (region, order_count, total_amount)
+        INSERT INTO agg_comments_by_post (post_id, comment_count, total_words)
         VALUES %s
-        ON CONFLICT (region) DO UPDATE
-          SET order_count = EXCLUDED.order_count,
-              total_amount = EXCLUDED.total_amount,
+        ON CONFLICT (post_id) DO UPDATE
+          SET comment_count = EXCLUDED.comment_count,
+              total_words = EXCLUDED.total_words,
               updated_at = now();
         """
         with conn.cursor() as cur:

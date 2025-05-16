@@ -3,8 +3,8 @@ import os, requests, json, time
 from datetime import datetime
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 
-API_URL   = os.getenv("SOURCE_API_URL", "https://api.example.com/orders")
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/data")
+API_URL   = os.getenv("SOURCE_API_URL")
+OUTPUT_DIR = os.getenv("OUTPUT_DIR")
 PUSHGATEWAY = os.getenv("PUSHGATEWAY", "pushgateway:9091")
 JOB_NAME    = "etl_extractor"
 

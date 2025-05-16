@@ -23,7 +23,7 @@ def transform():
             data = json.load(f)
         for rec in data:
             # Перевіряємо наявність обов’язкових полів
-            if rec.get("id") and rec.get("region") and rec.get("amount") is not None:
+            if rec.get("postId") and rec.get("id") and rec.get("body") is not None:
                 records.append(rec)
 
     # Видаляємо дублікати за полем "id"
@@ -32,10 +32,10 @@ def transform():
     # Агрегуємо: підсумовуємо кількість та суму замовлень по регіонах
     agg = {}
     for rec in unique:
-        reg = rec["region"]
-        agg.setdefault(reg, {"count": 0, "total_amount": 0.0})
-        agg[reg]["count"] += 1
-        agg[reg]["total_amount"] += float(rec["amount"])
+        post_id = rec["postId"]
+        agg.setdefault(post_id, {"count": 0, "total_words": 0})
+        agg[post_id]["count"] += 1
+        agg[post_id]["total_words"] += len(rec["body"].split())
 
     # Готуємо директорію та імена файлів з часовою міткою
     ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
