@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: etl_db
+      POSTGRES_USER: etl_user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U etl_user"]
+      interval: 10s
+      retries: 5
+
+  etl-extractor:
+    build:
+      context: .
+      dockerfile: docker/etl_extractor.Dockerfile
+    volumes:
+      - data-volume:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  etl-transformer:
+    build:
+      context: .
+      dockerfile: docker/etl_transformer.Dockerfile
+    volumes:
+      - data-volume:/data
+      - transformed-volume:/transformed
+    depends_on:
+      etl-extractor:
+        condition: service_started
+
+  etl-loader:
+    build:
+      context: .
+      dockerfile: docker/etl_loader.Dockerfile
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: etl_db
+      DB_USER: etl_user
+      DB_PASSWORD: password
+    volumes:
+      - transformed-volume:/transformed
+    depends_on:
+      postgres:
+        condition: service_healthy
+      etl-transformer:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
+  data-volume:
+  transformed-volume:
+иг

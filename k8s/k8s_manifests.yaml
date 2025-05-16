@@ -1,0 +1,310 @@
+# Kubernetes Manifests for Local ETL Pipeline
+# -------------------------------------------
+# To run locally:
+# 1. Install kind: https://kind.sigs.k8s.io/
+# 2. kind create cluster --name etl
+# 3. Build & load images:
+#      docker build -t etl_extractor:latest -f docker/etl_extractor.Dockerfile .
+#      docker build -t etl_transformer:latest -f docker/etl_transformer.Dockerfile .
+#      docker build -t etl_loader:latest -f docker/etl_loader.Dockerfile .
+#      kind load docker-image etl_extractor:latest --name etl
+#      kind load docker-image etl_transformer:latest --name etl
+#      kind load docker-image etl_loader:latest --name etl
+# 4. Apply manifests: kubectl apply -f k8s_manifests.yaml
+
+---
+# PersistentVolume & PVC for raw data
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: data-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /tmp/etl/data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# PersistentVolume & PVC for transformed data
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: transformed-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /tmp/etl/transformed
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: transformed-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+# ETL Extractor CronJob (every 5 min)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etl-extractor
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: extractor
+            image: etl_extractor:latest
+            volumeMounts:
+            - name: data-vol
+              mountPath: /data
+          restartPolicy: OnFailure
+          volumes:
+          - name: data-vol
+            persistentVolumeClaim:
+              claimName: data-pvc
+
+---
+# ETL Transformer CronJob (every 5 min)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etl-transformer
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: transformer
+            image: etl_transformer:latest
+            volumeMounts:
+            - name: data-vol
+              mountPath: /data
+            - name: transformed-vol
+              mountPath: /transformed
+          restartPolicy: OnFailure
+          volumes:
+          - name: data-vol
+            persistentVolumeClaim:
+              claimName: data-pvc
+          - name: transformed-vol
+            persistentVolumeClaim:
+              claimName: transformed-pvc
+
+---
+# ETL Loader CronJob (every 5 min)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etl-loader
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: loader
+            image: etl_loader:latest
+            env:
+            - name: DB_HOST
+              value: "postgres"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "etl_db"
+            - name: DB_USER
+              value: "etl_user"
+            - name: DB_PASSWORD
+              value: "password"
+            volumeMounts:
+            - name: transformed-vol
+              mountPath: /transformed
+          restartPolicy: OnFailure
+          volumes:
+          - name: transformed-vol
+            persistentVolumeClaim:
+              claimName: transformed-pvc
+
+---
+# PostgreSQL Deployment & Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13
+        env:
+        - name: POSTGRES_DB
+          value: "etl_db"
+        - name: POSTGRES_USER
+          value: "etl_user"
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        volumeMounts:
+        - name: pgdata
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: pgdata
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pushgateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pushgateway
+  template:
+    metadata:
+      labels:
+        app: pushgateway
+    spec:
+      containers:
+      - name: pushgateway
+        image: prom/pushgateway:latest
+        ports:
+        - containerPort: 9091
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pushgateway
+spec:
+  selector:
+    app: pushgateway
+  ports:
+  - name: metrics
+    port: 9091
+    targetPort: 9091
+---
+# ConfigMap з налаштуванням Prometheus для скрейпу Pushgateway
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: 'pushgateway'
+        static_configs:
+          - targets: ['pushgateway:9091']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        args:
+        - "--config.file=/etc/prometheus/prometheus.yml"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/prometheus
+      volumes:
+      - name: config
+        configMap:
+          name: prometheus-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+spec:
+  selector:
+    app: grafana
+  ports:
+  - port: 3000
+    targetPort: 3000
