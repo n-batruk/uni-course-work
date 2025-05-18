@@ -1,19 +1,4 @@
-# Kubernetes Manifests for Local ETL Pipeline
-# -------------------------------------------
-# To run locally:
-# 1. Install kind: https://kind.sigs.k8s.io/
-# 2. kind create cluster --name etl
-# 3. Build & load images:
-#      docker build -t etl_extractor:latest -f docker/etl_extractor.Dockerfile .
-#      docker build -t etl_transformer:latest -f docker/etl_transformer.Dockerfile .
-#      docker build -t etl_loader:latest -f docker/etl_loader.Dockerfile .
-#      kind load docker-image etl_extractor:latest --name etl
-#      kind load docker-image etl_transformer:latest --name etl
-#      kind load docker-image etl_loader:latest --name etl
-# 4. Apply manifests: kubectl apply -f k8s_manifests.yaml
-
 ---
-# PersistentVolume & PVC for raw data
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -63,7 +48,7 @@ spec:
       storage: 1Gi
 
 ---
-# ETL Extractor CronJob (every 5 min)
+# ETL Extractor CronJob
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -77,6 +62,7 @@ spec:
           containers:
           - name: extractor
             image: etl_extractor:latest
+            imagePullPolicy: Never
             volumeMounts:
             - name: data-vol
               mountPath: /data
@@ -87,7 +73,7 @@ spec:
               claimName: data-pvc
 
 ---
-# ETL Transformer CronJob (every 5 min)
+# ETL Transformer CronJob
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -101,6 +87,7 @@ spec:
           containers:
           - name: transformer
             image: etl_transformer:latest
+            imagePullPolicy: Never
             volumeMounts:
             - name: data-vol
               mountPath: /data
@@ -116,7 +103,7 @@ spec:
               claimName: transformed-pvc
 
 ---
-# ETL Loader CronJob (every 5 min)
+# ETL Loader CronJob
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -130,6 +117,7 @@ spec:
           containers:
           - name: loader
             image: etl_loader:latest
+            imagePullPolicy: Never
             env:
             - name: DB_HOST
               value: "postgres"
@@ -226,7 +214,6 @@ spec:
     port: 9091
     targetPort: 9091
 ---
-# ConfigMap з налаштуванням Prometheus для скрейпу Pushgateway
 apiVersion: v1
 kind: ConfigMap
 metadata:

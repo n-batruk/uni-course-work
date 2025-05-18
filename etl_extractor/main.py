@@ -21,7 +21,6 @@ def fetch_and_save():
         json.dump(data, f, ensure_ascii=False, indent=2)
     duration = time.time() - start
 
-    # Пушимо метрики в Pushgateway
     registry = CollectorRegistry()
     Gauge('etl_records_extracted', 'Number of records extracted', registry=registry).set(len(data))
     Gauge('etl_extract_duration_seconds', 'Duration of extract job', registry=registry).set(duration)
