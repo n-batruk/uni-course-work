@@ -56,6 +56,11 @@ services:
     #   etl-transformer:
     #     condition: service_completed_successfully
 
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow.Dockerfile
+    image: airflow-etl:latest
 volumes:
   pgdata:
   data-volume:

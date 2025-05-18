@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: airflow-config
+  namespace: airflow
+data:
+  AIRFLOW__CORE__EXECUTOR: 'LocalExecutor'
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: 'postgresql+psycopg2://etl_user:password@postgres.default.svc.cluster.local:5432/etl_db'
+  AIRFLOW__CORE__LOAD_EXAMPLES: 'False'
+  AIRFLOW__CORE__DAGS_FOLDER: '/opt/airflow/dags'

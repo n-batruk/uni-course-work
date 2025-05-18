@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: airflow-db-init
+  namespace: airflow
+spec:
+  template:
+    spec:
+      containers:
+      - name: init
+        image: airflow-etl:latest
+        imagePullPolicy: Never
+        # Inject ConfigMap so airflow uses Postgres instead of SQLite
+        envFrom:
+        - configMapRef:
+            name: airflow-config
+        command: ["airflow", "db", "init"]
+      restartPolicy: OnFailure
+  backoffLimit: 1
