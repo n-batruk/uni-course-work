@@ -18,6 +18,7 @@ services:
     build:
       context: .
       dockerfile: docker/etl_extractor.Dockerfile
+    image: etl_extractor:latest
     # volumes:
     #   - data-volume:/data
     # depends_on:
@@ -28,6 +29,7 @@ services:
     build:
       context: .
       dockerfile: docker/etl_transformer.Dockerfile
+    image: etl_transformer:latest
     # volumes:
     #   - data-volume:/data
     #   - transformed-volume:/transformed
@@ -39,6 +41,7 @@ services:
     build:
       context: .
       dockerfile: docker/etl_loader.Dockerfile
+    image: etl_loader:latest
     # environment:
     #   DB_HOST: postgres
     #   DB_PORT: 5432

@@ -1,4 +1,3 @@
-# файл: .github/workflows/ci.yml
 name: CI/CD ETL Pipeline
 
 on:
