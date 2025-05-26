@@ -13,6 +13,15 @@ spec:
       labels:
         component: scheduler
     spec:
+      serviceAccountName: airflow-sa
+      initContainers:
+      - name: init-db
+        image: airflow-etl:latest
+        imagePullPolicy: Never
+        envFrom:
+        - configMapRef:
+            name: airflow-config
+        command: ["airflow", "db", "init"]
       containers:
       - name: scheduler
         image: airflow-etl:latest
@@ -20,9 +29,14 @@ spec:
         envFrom:
         - configMapRef:
             name: airflow-config
+        command:
+          - "airflow"
+          - "scheduler"
         volumeMounts:
-        - name: dags
-          mountPath: /opt/airflow/dags
+        - name: transformed 
+          mountPath: /transformed
       volumes:
-      - name: dags
-        emptyDir: {}
+      - name: transformed
+        persistentVolumeClaim:
+          claimName: transformed-pvc
+---

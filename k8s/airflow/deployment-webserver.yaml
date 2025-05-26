@@ -13,20 +13,20 @@ spec:
       labels:
         component: webserver
     spec:
+      serviceAccountName: airflow-sa
       containers:
       - name: webserver
         image: airflow-etl:latest
         imagePullPolicy: Never
-        # Inject all AIRFLOW__* settings from the ConfigMap
         envFrom:
         - configMapRef:
             name: airflow-config
-        # Let the image's ENTRYPOINT handle running "airflow webserver"
+        command:
+          - "airflow"
+          - "webserver"
+          - "--host"
+          - "0.0.0.0"
+          - "--port"
+          - "8080"
         ports:
         - containerPort: 8080
-        volumeMounts:
-        - name: dags
-          mountPath: /opt/airflow/dags
-      volumes:
-      - name: dags
-        emptyDir: {}
