@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pushgateway
+  namespace: monitoring
+  labels:
+    app: pushgateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pushgateway
+  template:
+    metadata:
+      labels:
+        app: pushgateway
+    spec:
+      containers:
+      - name: pushgateway
+        image: prom/pushgateway:latest
+        args:
+          - --persistence.file=/data/metrics.timestamp
+        ports:
+          - containerPort: 9091
+        volumeMounts:
+          - name: data
+            mountPath: /data
+      volumes:
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pushgateway
+  namespace: monitoring
+spec:
+  selector:
+    app: pushgateway
+  ports:
+    - port: 9091
+      targetPort: 9091
+      protocol: TCP
