@@ -40,10 +40,17 @@ with DAG(
         image_pull_policy='Never',
         cmds=['python', 'main.py', 'extract'],
         env_vars={
-            "PUSHGATEWAY": "http://pushgateway.monitoring.svc.cluster.local:9091"
+            "PUSHGATEWAY":  "http://pushgateway.monitoring.svc.cluster.local:9091",
+            "OUTPUT_DIR":   "/data",
+            "DB_HOST":      "postgres.etl-db.svc.cluster.local",
+            "DB_PORT":      "5432",
+            "DB_NAME":      "etl_db",
+            "DB_USER":      "etl_user",
+            "DB_PASSWORD":  "strongPassword123",
         },
         volumes=[raw_vol, transformed_vol],
         volume_mounts=[raw_mount, transformed_mount],
+        is_delete_operator_pod=False, 
         in_cluster=True,
         get_logs=True,
         service_account_name='airflow-sa',
@@ -56,11 +63,14 @@ with DAG(
         image='etl_transformer:latest',
         image_pull_policy='Never',
         env_vars={
-            "PUSHGATEWAY": "http://pushgateway.monitoring.svc.cluster.local:9091"
+            "PUSHGATEWAY": "http://pushgateway.monitoring.svc.cluster.local:9091",
+            "INPUT_DIR": "/data",
+            "OUTPUT_DIR": "/transformed"
         },
         cmds=['python', 'main.py', 'transform'],
         volumes=[raw_vol, transformed_vol],
         volume_mounts=[raw_mount, transformed_mount],
+        is_delete_operator_pod=False,
         in_cluster=True,
         get_logs=True,
         service_account_name='airflow-sa',
@@ -73,7 +83,13 @@ with DAG(
         image='etl_loader:latest',
         image_pull_policy='Never',
         env_vars={
-            "PUSHGATEWAY": "http://pushgateway.monitoring.svc.cluster.local:9091"
+            "PUSHGATEWAY": "http://pushgateway.monitoring.svc.cluster.local:9091",
+            "INPUT_DIR": "/transformed",
+            "DB_HOST": "postgres.etl-db.svc.cluster.local",
+            "DB_PORT": "5432",
+            "DB_NAME": "etl_db",
+            "DB_USER": "etl_user",
+            "DB_PASSWORD": "strongPassword123"
         },
         cmds=['python', 'main.py', 'load'],
         volumes=[raw_vol, transformed_vol],

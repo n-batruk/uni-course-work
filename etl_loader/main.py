@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import os, json, glob, psycopg2
-from psycopg2.extras import execute_values
+import os, json, glob, psycopg2 # type: ignore
+from psycopg2.extras import execute_values # type: ignore
 
 # Env vars
 DB_HOST     = os.getenv("DB_HOST", "localhost")

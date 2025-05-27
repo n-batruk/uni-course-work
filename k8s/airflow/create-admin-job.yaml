@@ -4,6 +4,7 @@ metadata:
   name: airflow-create-admin
   namespace: airflow
 spec:
+  ttlSecondsAfterFinished: 300
   backoffLimit: 1
   template:
     spec:
