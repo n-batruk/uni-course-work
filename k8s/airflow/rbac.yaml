@@ -3,7 +3,6 @@ kind: ServiceAccount
 metadata:
   name: airflow-sa
   namespace: airflow
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -11,10 +10,9 @@ metadata:
   name: airflow-pod-manager
   namespace: airflow
 rules:
-- apiGroups: [""]
-  resources: ["pods", "pods/log"]
-  verbs: ["get", "list", "watch", "create", "delete", "patch"]
-
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -22,9 +20,9 @@ metadata:
   name: airflow-pod-manager-binding
   namespace: airflow
 subjects:
-- kind: ServiceAccount
-  name: airflow-sa
-  namespace: airflow
+  - kind: ServiceAccount
+    name: airflow-sa
+    namespace: airflow
 roleRef:
   kind: Role
   name: airflow-pod-manager

@@ -15,28 +15,25 @@ spec:
     spec:
       serviceAccountName: airflow-sa
       initContainers:
-      - name: init-db
-        image: airflow-etl:latest
-        imagePullPolicy: Never
-        envFrom:
-        - configMapRef:
-            name: airflow-config
-        command: ["airflow", "db", "init"]
+        - name: init-db
+          image: airflow-etl:latest
+          imagePullPolicy: Never
+          envFrom:
+            - configMapRef:
+                name: airflow-config
+          command: ["airflow", "db", "init"]
       containers:
-      - name: scheduler
-        image: airflow-etl:latest
-        imagePullPolicy: Never
-        envFrom:
-        - configMapRef:
-            name: airflow-config
-        command:
-          - "airflow"
-          - "scheduler"
-        volumeMounts:
-        - name: transformed 
-          mountPath: /transformed
+        - name: scheduler
+          image: airflow-etl:latest
+          imagePullPolicy: Never
+          envFrom:
+            - configMapRef:
+                name: airflow-config
+          command: ["airflow", "scheduler"]
+          volumeMounts:
+            - name: transformed
+              mountPath: /transformed
       volumes:
-      - name: transformed
-        persistentVolumeClaim:
-          claimName: transformed-pvc
----
+        - name: transformed
+          persistentVolumeClaim:
+            claimName: transformed-pvc

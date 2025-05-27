@@ -9,27 +9,25 @@ spec:
   template:
     spec:
       containers:
-      - name: create-admin
-        image: airflow-etl:latest
-        imagePullPolicy: Never
-        # pull in the same AIRFLOW__* env vars as everyone else
-        envFrom:
-        - configMapRef:
-            name: airflow-config
-        # leave ENTRYPOINT alone; feed your subcommand via args:
-        args:
-          - "users"
-          - "create"
-          - "--username"
-          - "admin"
-          - "--firstname"
-          - "Admin"
-          - "--lastname"
-          - "User"
-          - "--role"
-          - "Admin"
-          - "--email"
-          - "admin@example.com"
-          - "--password"
-          - "AdminPassword123"
+        - name: create-admin
+          image: airflow-etl:latest
+          imagePullPolicy: Never
+          envFrom:
+            - configMapRef:
+                name: airflow-config
+          args:
+            - users
+            - create
+            - --username
+            - admin
+            - --firstname
+            - Admin
+            - --lastname
+            - User
+            - --role
+            - Admin
+            - --email
+            - admin@example.com
+            - --password
+            - AdminPassword123
       restartPolicy: OnFailure

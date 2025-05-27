@@ -15,18 +15,12 @@ spec:
     spec:
       serviceAccountName: airflow-sa
       containers:
-      - name: webserver
-        image: airflow-etl:latest
-        imagePullPolicy: Never
-        envFrom:
-        - configMapRef:
-            name: airflow-config
-        command:
-          - "airflow"
-          - "webserver"
-          - "--host"
-          - "0.0.0.0"
-          - "--port"
-          - "8080"
-        ports:
-        - containerPort: 8080
+        - name: webserver
+          image: airflow-etl:latest
+          imagePullPolicy: Never
+          envFrom:
+            - configMapRef:
+                name: airflow-config
+          command: ["airflow", "webserver", "--host", "0.0.0.0", "--port", "8080"]
+          ports:
+            - containerPort: 8080

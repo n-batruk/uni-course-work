@@ -1,57 +1,49 @@
 #!/usr/bin/env python3
-import os
-import json
-import glob
+import os, psycopg2
+from psycopg2.extras import execute_values
 from datetime import datetime
 
-# Налаштування директорій через змінні оточення
-INPUT_DIR = os.getenv("INPUT_DIR", "/data")
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/transformed")
+DB_HOST     = os.getenv("DB_HOST")
+DB_PORT     = os.getenv("DB_PORT")
+DB_NAME     = os.getenv("DB_NAME")
+DB_USER     = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+
+def get_conn():
+    return psycopg2.connect(
+        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
+        user=DB_USER, password=DB_PASSWORD
+    )
 
 def transform():
-    # Збираємо всі файли з шаблоном orders_*.json
-    pattern = os.path.join(INPUT_DIR, "orders_*.json")
-    files = sorted(glob.glob(pattern))
-    if not files:
-        print(f"[Transform] Файли не знайдено за шляхом {pattern}")
-        return
-
-    # Зчитуємо та фільтруємо записи
-    records = []
-    for path in files:
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        for rec in data:
-            # Перевіряємо наявність обов’язкових полів
-            if rec.get("postId") and rec.get("id") and rec.get("body") is not None:
-                records.append(rec)
-
-    # Видаляємо дублікати за полем "id"
-    unique = list({rec["id"]: rec for rec in records}.values())
-
-    # Агрегуємо: підсумовуємо кількість та суму замовлень по регіонах
-    agg = {}
-    for rec in unique:
-        post_id = rec["postId"]
-        agg.setdefault(post_id, {"count": 0, "total_words": 0})
-        agg[post_id]["count"] += 1
-        agg[post_id]["total_words"] += len(rec["body"].split())
-
-    # Готуємо директорію та імена файлів з часовою міткою
-    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    cleaned_path = os.path.join(OUTPUT_DIR, f"cleaned_{ts}.json")
-    agg_path     = os.path.join(OUTPUT_DIR, f"aggregated_{ts}.json")
-
-    # Зберігаємо очищені записи
-    with open(cleaned_path, 'w', encoding='utf-8') as f:
-        json.dump(unique, f, ensure_ascii=False, indent=2)
-    print(f"[Transform] Очищені записи збережено: {cleaned_path}")
-
-    # Зберігаємо агреговану статистику
-    with open(agg_path, 'w', encoding='utf-8') as f:
-        json.dump(agg, f, ensure_ascii=False, indent=2)
-    print(f"[Transform] Агрегована статистика збережена: {agg_path}")
+    conn = get_conn()
+    with conn.cursor() as cur:
+        # 1) filter & dedupe raw_extracted → clean_comments
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS clean_comments AS
+        SELECT DISTINCT
+          (payload->>'id')::int    AS id,
+          (payload->>'postId')::int AS post_id,
+          payload->>'name'         AS name,
+          payload->>'email'        AS email,
+          payload->>'body'         AS body,
+          now()                    AS transformed_at
+        FROM raw_extracted;
+        """)
+        # 2) aggregate → agg_comments_by_post
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS agg_comments_by_post AS
+        SELECT
+          post_id,
+          COUNT(*)         AS comment_count,
+          SUM(LENGTH(body) - LENGTH(REPLACE(body, ' ', '')) + 1) AS total_words,
+          now()            AS transformed_at
+        FROM clean_comments
+        GROUP BY post_id;
+        """)
+    conn.commit()
+    conn.close()
+    print("[Transform] Data written to clean_comments and agg_comments_by_post")
 
 if __name__ == "__main__":
     transform()

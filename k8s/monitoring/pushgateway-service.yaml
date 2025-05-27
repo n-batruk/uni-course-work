@@ -4,8 +4,10 @@ metadata:
   name: pushgateway
   namespace: monitoring
 spec:
-  type: ClusterIP
-  selector: {app: pushgateway}
+  type: NodePort
+  selector:
+    app: pushgateway
   ports:
-  - port: 9091
-    targetPort: 9091
+    - port: 9091
+      targetPort: 9091
+      nodePort: 30091

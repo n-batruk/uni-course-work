@@ -4,8 +4,10 @@ metadata:
   name: prometheus
   namespace: monitoring
 spec:
-  type: ClusterIP
-  selector: {app: prometheus}
+  type: NodePort
+  selector:
+    app: prometheus
   ports:
-  - port: 9090
-    targetPort: 9090
+    - port: 9090
+      targetPort: 9090
+      nodePort: 30090

@@ -37,11 +37,11 @@ services:
     #   etl-extractor:
     #     condition: service_started
 
-  etl-loader:
-    build:
-      context: .
-      dockerfile: docker/etl_loader.Dockerfile
-    image: etl_loader:latest
+  # etl-loader:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/etl_loader.Dockerfile
+  #   image: etl_loader:latest
     # environment:
     #   DB_HOST: postgres
     #   DB_PORT: 5432
